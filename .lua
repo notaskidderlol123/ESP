@@ -339,7 +339,7 @@ function UILibrary:CreateWindow(options)
             wheel.Size = UDim2.new(0, 80, 0, 80)
             wheel.Position = UDim2.new(0, 5, 0, 20)
             wheel.BackgroundTransparency = 1
-            wheel.Image = "rbxassetid://6020299355" -- Roblox color wheel asset (you can replace with a custom one)
+            wheel.Image = "rbxassetid://6020299355" -- Roblox color wheel asset
             wheel.Parent = wheelFrame
 
             local colorDisplay = Instance.new("Frame")
@@ -381,6 +381,38 @@ function UILibrary:CreateWindow(options)
             end)
 
             return {GetColor = function() return color end}
+        end
+
+        -- Function to add a button (for GUI Bind)
+        function page:AddButton(options)
+            local buttonFrame = Instance.new("Frame")
+            buttonFrame.Size = UDim2.new(1, 0, 0, 30)
+            buttonFrame.BackgroundTransparency = 1
+            buttonFrame.Parent = pageFrame
+
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(1, 0, 1, 0)
+            button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            button.Text = options.Name
+            button.TextColor3 = Color3.fromRGB(200, 200, 200)
+            button.TextSize = 14
+            button.Font = Enum.Font.SourceSans
+            button.Parent = buttonFrame
+
+            button.MouseEnter:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end)
+            button.MouseLeave:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            end)
+
+            button.MouseButton1Click:Connect(function()
+                if options.Callback then
+                    options.Callback()
+                end
+            end)
+
+            return button
         end
 
         -- Function to add a text box (for Lua tab)
@@ -784,28 +816,50 @@ players.PlayerRemoving:Connect(function(player)
 end)
 
 -- Exploits Implementation
--- Fly
+-- Admin-Like Fly
+local flyConnection
 local function toggleFly(state)
     if state then
+        local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyro.P = 10000
+        bodyGyro.Parent = hrp
+
         local bodyVelocity = Instance.new("BodyVelocity")
         bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        bodyVelocity.Parent = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+        bodyVelocity.Parent = hrp
 
-        game:GetService("RunService").RenderStepped:Connect(function()
+        if localPlayer.Character:FindFirstChild("Humanoid") then
+            localPlayer.Character.Humanoid.PlatformStand = true
+        end
+
+        flyConnection = game:GetService("RunService").RenderStepped:Connect(function()
             if not Exploits.Fly or not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                bodyGyro:Destroy()
                 bodyVelocity:Destroy()
+                if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+                    localPlayer.Character.Humanoid.PlatformStand = false
+                end
+                flyConnection:Disconnect()
                 return
             end
 
-            local hrp = localPlayer.Character.HumanoidRootPart
             local moveDirection = Vector3.new(
                 game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) and -1 or 0,
                 game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) and -1 or 0,
                 game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) and -1 or 0
             )
             bodyVelocity.Velocity = (camera.CFrame * moveDirection).Unit * Exploits.FlySpeed
+            bodyGyro.CFrame = camera.CFrame
         end)
+    else
+        if flyConnection then
+            flyConnection:Disconnect()
+        end
     end
 end
 
@@ -1123,22 +1177,18 @@ local timeStopCheckbox = ExploitsPage:AddCheckbox({
 local SettingsPage = MainWindow:CreatePage("Settings")
 SettingsPage:AddLabel("SETTINGS")
 
--- GUI Bind Toggle
-local guiBindCheckbox = SettingsPage:AddCheckbox({
-    Name = "GUI Bind",
-    Default = false,
-    Callback = function(state)
-        waitingForKeybind = state
+-- GUI Bind Button
+local guiBindButton = SettingsPage:AddButton({
+    Name = "GUI Bind: " .. currentKeybind.Name,
+    Callback = function()
+        waitingForKeybind = true
     end
 })
 
--- Display Current Keybind
-local keybindLabel = SettingsPage:AddLabel("Current Bind: " .. currentKeybind.Name)
-
--- Update keybind label when changed
+-- Update button text when keybind changes
 game:GetService("UserInputService").InputBegan:Connect(function(input)
     if waitingForKeybind and input.KeyCode ~= Enum.KeyCode.Unknown then
-        keybindLabel.Frame.Text = "Current Bind: " .. currentKeybind.Name
+        guiBindButton.Text = "GUI Bind: " .. currentKeybind.Name
     end
 end)
 
