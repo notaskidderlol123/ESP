@@ -6,7 +6,7 @@ function UILibrary:CreateWindow(options)
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "Grok3TestGui"
     screenGui.Parent = game.CoreGui
-    screenGui.Enabled = false -- Start hidden
+    screenGui.Enabled = true -- Start visible
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, options.Size.X, 0, options.Size.Y)
@@ -318,10 +318,10 @@ function UILibrary:CreateWindow(options)
             return {GetValue = function() return value end}
         end
 
-        -- Function to add a color wheel
+        -- Function to add a new color wheel (hue wheel + brightness slider)
         function page:AddColorWheel(options)
             local wheelFrame = Instance.new("Frame")
-            wheelFrame.Size = UDim2.new(1, 0, 0, 100)
+            wheelFrame.Size = UDim2.new(1, 0, 0, 120)
             wheelFrame.BackgroundTransparency = 1
             wheelFrame.Parent = pageFrame
 
@@ -335,47 +335,104 @@ function UILibrary:CreateWindow(options)
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = wheelFrame
 
-            local wheel = Instance.new("ImageLabel")
-            wheel.Size = UDim2.new(0, 80, 0, 80)
-            wheel.Position = UDim2.new(0, 5, 0, 20)
-            wheel.BackgroundTransparency = 1
-            wheel.Image = "rbxassetid://6020299355" -- Roblox color wheel asset
-            wheel.Parent = wheelFrame
+            -- Hue Wheel
+            local hueWheel = Instance.new("ImageLabel")
+            hueWheel.Size = UDim2.new(0, 80, 0, 80)
+            hueWheel.Position = UDim2.new(0, 5, 0, 30)
+            hueWheel.BackgroundTransparency = 1
+            hueWheel.Image = "rbxassetid://6020299355" -- Replace with your hue wheel image
+            hueWheel.Parent = wheelFrame
+
+            -- Brightness Slider
+            local brightnessSlider = Instance.new("Frame")
+            brightnessSlider.Size = UDim2.new(0, 20, 0, 80)
+            brightnessSlider.Position = UDim2.new(0, 90, 0, 30)
+            brightnessSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            brightnessSlider.Parent = wheelFrame
+
+            local brightnessGradient = Instance.new("UIGradient")
+            brightnessGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+            })
+            brightnessGradient.Rotation = 90
+            brightnessGradient.Parent = brightnessSlider
+
+            local brightnessIndicator = Instance.new("Frame")
+            brightnessIndicator.Size = UDim2.new(1, 0, 0, 2)
+            brightnessIndicator.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            brightnessIndicator.Position = UDim2.new(0, 0, 0, 0)
+            brightnessIndicator.Parent = brightnessSlider
 
             local colorDisplay = Instance.new("Frame")
             colorDisplay.Size = UDim2.new(0, 20, 0, 20)
-            colorDisplay.Position = UDim2.new(0, 90, 0, 20)
+            colorDisplay.Position = UDim2.new(0, 115, 0, 30)
             colorDisplay.BackgroundColor3 = options.Default
             colorDisplay.Parent = wheelFrame
 
+            local hue = 0
+            local saturation = 1
+            local brightness = 1
             local color = options.Default
-            local selecting = false
+            local selectingHue = false
+            local selectingBrightness = false
 
-            wheel.InputBegan:Connect(function(input)
+            -- Hue Wheel Interaction
+            hueWheel.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    selecting = true
+                    selectingHue = true
                 end
             end)
 
-            wheel.InputEnded:Connect(function(input)
+            hueWheel.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    selecting = false
+                    selectingHue = false
+                end
+            end)
+
+            -- Brightness Slider Interaction
+            brightnessSlider.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    selectingBrightness = true
+                end
+            end)
+
+            brightnessSlider.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    selectingBrightness = false
                 end
             end)
 
             game:GetService("UserInputService").InputChanged:Connect(function(input)
-                if selecting and input.UserInputType == Enum.UserInputType.MouseMovement then
-                    local mousePos = Vector2.new(input.Position.X, input.Position.Y)
-                    local wheelPos = wheel.AbsolutePosition + wheel.AbsoluteSize / 2
-                    local delta = mousePos - wheelPos
-                    local angle = math.atan2(delta.Y, delta.X)
-                    local hue = (angle + math.pi) / (2 * math.pi)
-                    local saturation = math.clamp(delta.Magnitude / (wheel.AbsoluteSize.X / 2), 0, 1)
-                    local r, g, b = Color3.fromHSV(hue, saturation, 1):ToRGB()
-                    color = Color3.fromRGB(r * 255, g * 255, b * 255)
-                    colorDisplay.BackgroundColor3 = color
-                    if options.Callback then
-                        options.Callback(color)
+                if input.UserInputType == Enum.UserInputType.MouseMovement then
+                    if selectingHue then
+                        local mousePos = Vector2.new(input.Position.X, input.Position.Y)
+                        local wheelPos = hueWheel.AbsolutePosition + hueWheel.AbsoluteSize / 2
+                        local delta = mousePos - wheelPos
+                        local angle = math.atan2(delta.Y, delta.X)
+                        hue = (angle + math.pi) / (2 * math.pi)
+                        saturation = math.clamp(delta.Magnitude / (hueWheel.AbsoluteSize.X / 2), 0, 1)
+                        local r, g, b = Color3.fromHSV(hue, saturation, brightness):ToRGB()
+                        color = Color3.fromRGB(r * 255, g * 255, b * 255)
+                        colorDisplay.BackgroundColor3 = color
+                        if options.Callback then
+                            options.Callback(color)
+                        end
+                    end
+
+                    if selectingBrightness then
+                        local mousePos = input.Position.Y
+                        local sliderPos = brightnessSlider.AbsolutePosition.Y
+                        local sliderHeight = brightnessSlider.AbsoluteSize.Y
+                        local relativePos = math.clamp((mousePos - sliderPos) / sliderHeight, 0, 1)
+                        brightness = 1 - relativePos
+                        brightnessIndicator.Position = UDim2.new(0, 0, relativePos, 0)
+                        local r, g, b = Color3.fromHSV(hue, saturation, brightness):ToRGB()
+                        color = Color3.fromRGB(r * 255, g * 255, b * 255)
+                        colorDisplay.BackgroundColor3 = color
+                        if options.Callback then
+                            options.Callback(color)
+                        end
                     end
                 end
             end)
@@ -482,7 +539,7 @@ end
 local ESP = {
     Enabled = false,
     Box = false,
-    CornerBox = "Type",
+    HighlightBox = false,
     Name = false,
     Tracers = false,
     HealthInfo = false,
@@ -548,7 +605,7 @@ local function createESP(player)
     local boxHeight = math.abs(topPos.Y - bottomPos.Y)
     local boxWidth = boxHeight * 0.6
 
-    -- Create box drawing
+    -- Create box drawing (always full box)
     local box = Drawing.new("Square")
     box.Visible = ESP.Box
     box.Position = Vector2.new(screenPos.X - boxWidth / 2, topPos.Y)
@@ -557,9 +614,9 @@ local function createESP(player)
     box.Thickness = 2
     box.Filled = false
 
-    -- Highlight for Full type
+    -- Highlight box (semi-transparent fill)
     local highlight = Drawing.new("Square")
-    highlight.Visible = ESP.Box and ESP.CornerBox == "Full"
+    highlight.Visible = ESP.HighlightBox
     highlight.Position = box.Position
     highlight.Size = box.Size
     highlight.Color = ESP.Color
@@ -601,11 +658,6 @@ local function createESP(player)
     tracer.To = Vector2.new(screenPos.X, screenPos.Y)
     tracer.Color = ESP.Color
     tracer.Thickness = 2
-
-    if ESP.CornerBox == "Type" then
-        box.Size = Vector2.new(boxWidth * 0.3, boxHeight * 0.3)
-        box.Position = Vector2.new(screenPos.X - boxWidth * 0.15, screenPos.Y - boxHeight * 0.15)
-    end
 
     ESP.Drawings[player] = {Box = box, Highlight = highlight, Name = name, HealthBar = healthBar, HealthText = healthText, Tracer = tracer}
 end
@@ -677,22 +729,17 @@ local function updateESP()
         local boxHeight = math.abs(topPos.Y - bottomPos.Y)
         local boxWidth = boxHeight * 0.6
 
-        -- Update box
+        -- Update box (always full box)
         drawing.Box.Visible = ESP.Box and ESP.Enabled
         drawing.Box.Position = Vector2.new(screenPos.X - boxWidth / 2, topPos.Y)
         drawing.Box.Size = Vector2.new(boxWidth, boxHeight)
         drawing.Box.Color = ESP.Color
 
         -- Update highlight
-        drawing.Highlight.Visible = ESP.Box and ESP.CornerBox == "Full" and ESP.Enabled
+        drawing.Highlight.Visible = ESP.HighlightBox and ESP.Enabled
         drawing.Highlight.Position = drawing.Box.Position
         drawing.Highlight.Size = drawing.Box.Size
         drawing.Highlight.Color = ESP.Color
-
-        if ESP.CornerBox == "Type" then
-            drawing.Box.Size = Vector2.new(boxWidth * 0.3, boxHeight * 0.3)
-            drawing.Box.Position = Vector2.new(screenPos.X - boxWidth * 0.15, screenPos.Y - boxHeight * 0.15)
-        end
 
         -- Update name
         drawing.Name.Visible = ESP.Name and ESP.Enabled
@@ -818,17 +865,19 @@ end)
 -- Exploits Implementation
 -- Admin-Like Fly
 local flyConnection
+local bodyGyro
+local bodyVelocity
 local function toggleFly(state)
     if state then
         local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
-        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro = Instance.new("BodyGyro")
         bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
         bodyGyro.P = 10000
         bodyGyro.Parent = hrp
 
-        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity = Instance.new("BodyVelocity")
         bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         bodyVelocity.Velocity = Vector3.new(0, 0, 0)
         bodyVelocity.Parent = hrp
@@ -839,12 +888,12 @@ local function toggleFly(state)
 
         flyConnection = game:GetService("RunService").RenderStepped:Connect(function()
             if not Exploits.Fly or not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                bodyGyro:Destroy()
-                bodyVelocity:Destroy()
+                if bodyGyro then bodyGyro:Destroy() end
+                if bodyVelocity then bodyVelocity:Destroy() end
                 if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
                     localPlayer.Character.Humanoid.PlatformStand = false
                 end
-                flyConnection:Disconnect()
+                if flyConnection then flyConnection:Disconnect() end
                 return
             end
 
@@ -857,9 +906,12 @@ local function toggleFly(state)
             bodyGyro.CFrame = camera.CFrame
         end)
     else
-        if flyConnection then
-            flyConnection:Disconnect()
+        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+            localPlayer.Character.Humanoid.PlatformStand = false
         end
+        if flyConnection then flyConnection:Disconnect() end
     end
 end
 
@@ -966,13 +1018,12 @@ local boxCheckbox = VisualsPage:AddCheckbox({
     end
 })
 
--- 2D Corner Box Dropdown
-local cornerBoxDropdown = VisualsPage:AddDropdown({
-    Name = "2D Corner Box",
-    Options = {"Type", "Full"},
-    Default = "Type",
-    Callback = function(selected)
-        ESP.CornerBox = selected
+-- Highlight Box Checkbox
+local highlightBoxCheckbox = VisualsPage:AddCheckbox({
+    Name = "Highlight Box",
+    Default = false,
+    Callback = function(state)
+        ESP.HighlightBox = state
         updateESP()
     end
 })
@@ -1027,7 +1078,7 @@ local deadCheckCheckbox = VisualsPage:AddCheckbox({
     end
 })
 
--- Color Wheel
+-- New Color Wheel
 local colorWheel = VisualsPage:AddColorWheel({
     Name = "ESP Color",
     Default = Color3.fromRGB(255, 0, 0),
@@ -1182,6 +1233,7 @@ local guiBindButton = SettingsPage:AddButton({
     Name = "GUI Bind: " .. currentKeybind.Name,
     Callback = function()
         waitingForKeybind = true
+        guiBindButton.Text = "Waiting for key..."
     end
 })
 
