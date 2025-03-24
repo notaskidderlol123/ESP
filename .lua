@@ -318,104 +318,67 @@ function UILibrary:CreateWindow(options)
             return {GetValue = function() return value end}
         end
 
-        -- Function to add a color picker
-        function page:AddColorPicker(options)
-            local pickerFrame = Instance.new("Frame")
-            pickerFrame.Size = UDim2.new(1, 0, 0, 30)
-            pickerFrame.BackgroundTransparency = 1
-            pickerFrame.Parent = pageFrame
+        -- Function to add a color wheel
+        function page:AddColorWheel(options)
+            local wheelFrame = Instance.new("Frame")
+            wheelFrame.Size = UDim2.new(1, 0, 0, 100)
+            wheelFrame.BackgroundTransparency = 1
+            wheelFrame.Parent = pageFrame
 
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.5, 0, 1, 0)
+            label.Size = UDim2.new(1, 0, 0, 20)
             label.BackgroundTransparency = 1
             label.Text = options.Name
             label.TextColor3 = Color3.fromRGB(200, 200, 200)
             label.TextSize = 14
             label.Font = Enum.Font.SourceSans
             label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Parent = pickerFrame
+            label.Parent = wheelFrame
+
+            local wheel = Instance.new("ImageLabel")
+            wheel.Size = UDim2.new(0, 80, 0, 80)
+            wheel.Position = UDim2.new(0, 5, 0, 20)
+            wheel.BackgroundTransparency = 1
+            wheel.Image = "rbxassetid://6020299355" -- Roblox color wheel asset (you can replace with a custom one)
+            wheel.Parent = wheelFrame
 
             local colorDisplay = Instance.new("Frame")
             colorDisplay.Size = UDim2.new(0, 20, 0, 20)
-            colorDisplay.Position = UDim2.new(0.5, 0, 0, 5)
+            colorDisplay.Position = UDim2.new(0, 90, 0, 20)
             colorDisplay.BackgroundColor3 = options.Default
-            colorDisplay.Parent = pickerFrame
-
-            local rSlider = Instance.new("Frame")
-            rSlider.Size = UDim2.new(0.5, 0, 0, 5)
-            rSlider.Position = UDim2.new(0.55, 0, 0, 5)
-            rSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            rSlider.Parent = pickerFrame
-
-            local rFill = Instance.new("Frame")
-            rFill.Size = UDim2.new(options.Default.R, 0, 1, 0)
-            rFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            rFill.Parent = rSlider
-
-            local gSlider = Instance.new("Frame")
-            gSlider.Size = UDim2.new(0.5, 0, 0, 5)
-            gSlider.Position = UDim2.new(0.55, 0, 0, 15)
-            gSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            gSlider.Parent = pickerFrame
-
-            local gFill = Instance.new("Frame")
-            gFill.Size = UDim2.new(options.Default.G, 0, 1, 0)
-            gFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-            gFill.Parent = gSlider
-
-            local bSlider = Instance.new("Frame")
-            bSlider.Size = UDim2.new(0.5, 0, 0, 5)
-            bSlider.Position = UDim2.new(0.55, 0, 0, 25)
-            bSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            bSlider.Parent = pickerFrame
-
-            local bFill = Instance.new("Frame")
-            bFill.Size = UDim2.new(options.Default.B, 0, 1, 0)
-            bFill.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
-            bFill.Parent = bSlider
+            colorDisplay.Parent = wheelFrame
 
             local color = options.Default
-            local draggingR, draggingG, draggingB = false, false, false
+            local selecting = false
 
-            local function setupSlider(slider, fill, component)
-                local dragging = false
-                slider.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        dragging = true
-                    end
-                end)
-                slider.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        dragging = false
-                    end
-                end)
-                game:GetService("UserInputService").InputChanged:Connect(function(input)
-                    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                        local mousePos = input.Position.X
-                        local barPos = slider.AbsolutePosition.X
-                        local barSize = slider.AbsoluteSize.X
-                        local relativePos = math.clamp((mousePos - barPos) / barSize, 0, 1)
-                        if component == "R" then
-                            color = Color3.new(relativePos, color.G, color.B)
-                            fill.Size = UDim2.new(relativePos, 0, 1, 0)
-                        elseif component == "G" then
-                            color = Color3.new(color.R, relativePos, color.B)
-                            fill.Size = UDim2.new(relativePos, 0, 1, 0)
-                        elseif component == "B" then
-                            color = Color3.new(color.R, color.G, relativePos)
-                            fill.Size = UDim2.new(relativePos, 0, 1, 0)
-                        end
-                        colorDisplay.BackgroundColor3 = color
-                        if options.Callback then
-                            options.Callback(color)
-                        end
-                    end
-                end)
-            end
+            wheel.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    selecting = true
+                end
+            end)
 
-            setupSlider(rSlider, rFill, "R")
-            setupSlider(gSlider, gFill, "G")
-            setupSlider(bSlider, bFill, "B")
+            wheel.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    selecting = false
+                end
+            end)
+
+            game:GetService("UserInputService").InputChanged:Connect(function(input)
+                if selecting and input.UserInputType == Enum.UserInputType.MouseMovement then
+                    local mousePos = Vector2.new(input.Position.X, input.Position.Y)
+                    local wheelPos = wheel.AbsolutePosition + wheel.AbsoluteSize / 2
+                    local delta = mousePos - wheelPos
+                    local angle = math.atan2(delta.Y, delta.X)
+                    local hue = (angle + math.pi) / (2 * math.pi)
+                    local saturation = math.clamp(delta.Magnitude / (wheel.AbsoluteSize.X / 2), 0, 1)
+                    local r, g, b = Color3.fromHSV(hue, saturation, 1):ToRGB()
+                    color = Color3.fromRGB(r * 255, g * 255, b * 255)
+                    colorDisplay.BackgroundColor3 = color
+                    if options.Callback then
+                        options.Callback(color)
+                    end
+                end
+            end)
 
             return {GetColor = function() return color end}
         end
@@ -476,36 +439,6 @@ function UILibrary:CreateWindow(options)
             return {GetText = function() return textBox.Text end}
         end
 
-        -- Function to add a button (for Other tab)
-        function page:AddButton(options)
-            local buttonFrame = Instance.new("Frame")
-            buttonFrame.Size = UDim2.new(1, 0, 0, 30)
-            buttonFrame.BackgroundTransparency = 1
-            buttonFrame.Parent = pageFrame
-
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, 0, 1, 0)
-            button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            button.Text = options.Name
-            button.TextColor3 = Color3.fromRGB(200, 200, 200)
-            button.TextSize = 14
-            button.Font = Enum.Font.SourceSans
-            button.Parent = buttonFrame
-
-            button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            end)
-            button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            end)
-
-            button.MouseButton1Click:Connect(function()
-                if options.Callback then
-                    options.Callback()
-                end
-            end)
-        end
-
         window.Pages[name] = page
         return page
     end
@@ -522,6 +455,7 @@ local ESP = {
     Tracers = false,
     HealthInfo = false,
     Teamcheck = false,
+    DeadCheck = false,
     Color = Color3.fromRGB(255, 0, 0),
     Drawings = {}
 }
@@ -532,7 +466,17 @@ local Aimbot = {
     Triggerbot = false,
     FOV = 180,
     UseFOV = false,
-    Teamcheck = false
+    Teamcheck = false,
+    DeadCheck = false
+}
+
+local Exploits = {
+    Fly = false,
+    FlySpeed = 50,
+    Speed = false,
+    SpeedValue = 32,
+    NoClip = false,
+    TimeStop = false
 }
 
 local players = game:GetService("Players")
@@ -542,14 +486,25 @@ local mouse = localPlayer:GetMouse()
 
 -- Function to create ESP drawings for a player
 local function createESP(player)
+    local drawing = ESP.Drawings[player]
+    if drawing then
+        drawing.Box:Remove()
+        drawing.Highlight:Remove()
+        drawing.Name:Remove()
+        drawing.HealthBar:Remove()
+        drawing.HealthText:Remove()
+        drawing.Tracer:Remove()
+        ESP.Drawings[player] = nil
+    end
+
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
     local rootPart = character.HumanoidRootPart
     local head = character.Head
     local humanoid = character:FindFirstChild("Humanoid")
-    if not humanoid or humanoid.Health <= 0 then return end
-
+    if not humanoid then return end
+    if ESP.DeadCheck and humanoid.Health <= 0 then return end
     if ESP.Teamcheck and player.Team == localPlayer.Team then return end
 
     local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
@@ -559,7 +514,7 @@ local function createESP(player)
     local topPos = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
     local bottomPos = camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0, 3, 0))
     local boxHeight = math.abs(topPos.Y - bottomPos.Y)
-    local boxWidth = boxHeight * 0.6 -- Consistent width for both types
+    local boxWidth = boxHeight * 0.6
 
     -- Create box drawing
     local box = Drawing.new("Square")
@@ -576,7 +531,7 @@ local function createESP(player)
     highlight.Position = box.Position
     highlight.Size = box.Size
     highlight.Color = ESP.Color
-    highlight.Transparency = 0.8 -- Semi-transparent
+    highlight.Transparency = 0.8
     highlight.Filled = true
 
     -- Name drawing (on head)
@@ -616,7 +571,6 @@ local function createESP(player)
     tracer.Thickness = 2
 
     if ESP.CornerBox == "Type" then
-        -- Corner box style
         box.Size = Vector2.new(boxWidth * 0.3, boxHeight * 0.3)
         box.Position = Vector2.new(screenPos.X - boxWidth * 0.15, screenPos.Y - boxHeight * 0.15)
     end
@@ -624,23 +578,121 @@ local function createESP(player)
     ESP.Drawings[player] = {Box = box, Highlight = highlight, Name = name, HealthBar = healthBar, HealthText = healthText, Tracer = tracer}
 end
 
--- Function to update ESP
+-- Function to update ESP positions
 local function updateESP()
-    for _, drawing in pairs(ESP.Drawings) do
-        drawing.Box:Remove()
-        drawing.Highlight:Remove()
-        drawing.Name:Remove()
-        drawing.HealthBar:Remove()
-        drawing.HealthText:Remove()
-        drawing.Tracer:Remove()
+    for player, drawing in pairs(ESP.Drawings) do
+        local character = player.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then
+            drawing.Box:Remove()
+            drawing.Highlight:Remove()
+            drawing.Name:Remove()
+            drawing.HealthBar:Remove()
+            drawing.HealthText:Remove()
+            drawing.Tracer:Remove()
+            ESP.Drawings[player] = nil
+            continue
+        end
+
+        local rootPart = character.HumanoidRootPart
+        local head = character.Head
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid then
+            drawing.Box:Remove()
+            drawing.Highlight:Remove()
+            drawing.Name:Remove()
+            drawing.HealthBar:Remove()
+            drawing.HealthText:Remove()
+            drawing.Tracer:Remove()
+            ESP.Drawings[player] = nil
+            continue
+        end
+
+        if ESP.DeadCheck and humanoid.Health <= 0 then
+            drawing.Box:Remove()
+            drawing.Highlight:Remove()
+            drawing.Name:Remove()
+            drawing.HealthBar:Remove()
+            drawing.HealthText:Remove()
+            drawing.Tracer:Remove()
+            ESP.Drawings[player] = nil
+            continue
+        end
+
+        if ESP.Teamcheck and player.Team == localPlayer.Team then
+            drawing.Box:Remove()
+            drawing.Highlight:Remove()
+            drawing.Name:Remove()
+            drawing.HealthBar:Remove()
+            drawing.HealthText:Remove()
+            drawing.Tracer:Remove()
+            ESP.Drawings[player] = nil
+            continue
+        end
+
+        local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+        if not onScreen then
+            drawing.Box.Visible = false
+            drawing.Highlight.Visible = false
+            drawing.Name.Visible = false
+            drawing.HealthBar.Visible = false
+            drawing.HealthText.Visible = false
+            drawing.Tracer.Visible = false
+            continue
+        end
+
+        local topPos = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
+        local bottomPos = camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0, 3, 0))
+        local boxHeight = math.abs(topPos.Y - bottomPos.Y)
+        local boxWidth = boxHeight * 0.6
+
+        -- Update box
+        drawing.Box.Visible = ESP.Box and ESP.Enabled
+        drawing.Box.Position = Vector2.new(screenPos.X - boxWidth / 2, topPos.Y)
+        drawing.Box.Size = Vector2.new(boxWidth, boxHeight)
+        drawing.Box.Color = ESP.Color
+
+        -- Update highlight
+        drawing.Highlight.Visible = ESP.Box and ESP.CornerBox == "Full" and ESP.Enabled
+        drawing.Highlight.Position = drawing.Box.Position
+        drawing.Highlight.Size = drawing.Box.Size
+        drawing.Highlight.Color = ESP.Color
+
+        if ESP.CornerBox == "Type" then
+            drawing.Box.Size = Vector2.new(boxWidth * 0.3, boxHeight * 0.3)
+            drawing.Box.Position = Vector2.new(screenPos.X - boxWidth * 0.15, screenPos.Y - boxHeight * 0.15)
+        end
+
+        -- Update name
+        drawing.Name.Visible = ESP.Name and ESP.Enabled
+        drawing.Name.Position = Vector2.new(topPos.X, topPos.Y - 30)
+        drawing.Name.Color = ESP.Color
+
+        -- Update health
+        drawing.HealthBar.Visible = ESP.HealthInfo and ESP.Enabled
+        drawing.HealthBar.From = Vector2.new(topPos.X - 20, topPos.Y - 10)
+        drawing.HealthBar.To = Vector2.new(topPos.X + 20, topPos.Y - 10)
+        drawing.HealthBar.Color = ESP.Color
+        local health = humanoid.Health / humanoid.MaxHealth
+        drawing.HealthBar.To = Vector2.new(drawing.HealthBar.From.X + 40 * health, drawing.HealthBar.From.Y)
+
+        drawing.HealthText.Visible = ESP.HealthInfo and ESP.Enabled
+        drawing.HealthText.Text = tostring(math.floor(health * 100)) .. "%"
+        drawing.HealthText.Position = Vector2.new(topPos.X, topPos.Y - 10)
+        drawing.HealthText.Color = ESP.Color
+
+        -- Update tracer
+        drawing.Tracer.Visible = ESP.Tracers and ESP.Enabled
+        drawing.Tracer.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+        drawing.Tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+        drawing.Tracer.Color = ESP.Color
     end
-    ESP.Drawings = {}
 
-    if not ESP.Enabled then return end
-
-    for _, player in pairs(players:GetPlayers()) do
-        if player ~= localPlayer then
-            createESP(player)
+    -- Recreate ESP for new players
+    if ESP.Enabled then
+        for _, player in pairs(players:GetPlayers()) do
+            if player ~= localPlayer and not ESP.Drawings[player] then
+                createESP(player)
+            end
         end
     end
 end
@@ -655,13 +707,14 @@ local function getClosestPlayerToMouse()
         if Aimbot.Teamcheck and player.Team == localPlayer.Team then continue end
 
         local character = player.Character
-        if not character or not character:FindFirstChild("Head") then continue end
+        if not character or not character:FindFirstChild("HumanoidRootPart") then continue end
 
-        local head = character.Head
+        local rootPart = character.HumanoidRootPart
         local humanoid = character:FindFirstChild("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then continue end
+        if not humanoid then continue end
+        if Aimbot.DeadCheck and humanoid.Health <= 0 then continue end
 
-        local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+        local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
         if not onScreen then continue end
 
         local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
@@ -674,15 +727,29 @@ local function getClosestPlayerToMouse()
     return closestPlayer
 end
 
--- Aimlock
+-- FOV Circle for Aimbot
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Radius = 180
+fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+fovCircle.Color = Color3.fromRGB(255, 255, 255)
+fovCircle.Thickness = 2
+fovCircle.Filled = false
+
+-- Aimlock (face HRP)
 game:GetService("RunService").RenderStepped:Connect(function()
     if Aimbot.Enabled and Aimbot.Aimlock then
         local target = getClosestPlayerToMouse()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            local headPos = target.Character.Head.Position
-            camera.CFrame = CFrame.new(camera.CFrame.Position, headPos)
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local hrpPos = target.Character.HumanoidRootPart.Position
+            camera.CFrame = CFrame.new(camera.CFrame.Position, hrpPos)
         end
     end
+
+    -- Update FOV circle
+    fovCircle.Visible = Aimbot.Enabled and Aimbot.UseFOV
+    fovCircle.Radius = Aimbot.FOV
+    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 end)
 
 -- Triggerbot
@@ -690,7 +757,6 @@ game:GetService("UserInputService").InputBegan:Connect(function(input)
     if Aimbot.Enabled and Aimbot.Triggerbot and input.UserInputType == Enum.UserInputType.MouseButton1 then
         local target = getClosestPlayerToMouse()
         if target and target.Character and target.Character:FindFirstChild("Humanoid") then
-            -- Simulate a "kill" (for demonstration; actual exploits might use different methods)
             target.Character.Humanoid.Health = 0
         end
     end
@@ -717,15 +783,95 @@ players.PlayerRemoving:Connect(function(player)
     end
 end)
 
+-- Exploits Implementation
+-- Fly
+local function toggleFly(state)
+    if state then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if not Exploits.Fly or not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                bodyVelocity:Destroy()
+                return
+            end
+
+            local hrp = localPlayer.Character.HumanoidRootPart
+            local moveDirection = Vector3.new(
+                game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) and -1 or 0,
+                game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) and -1 or 0,
+                game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) and -1 or 0
+            )
+            bodyVelocity.Velocity = (camera.CFrame * moveDirection).Unit * Exploits.FlySpeed
+        end)
+    end
+end
+
+-- Speed
+local function updateSpeed()
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        localPlayer.Character.Humanoid.WalkSpeed = Exploits.Speed and Exploits.SpeedValue or 16
+    end
+end
+
+-- NoClip
+local function toggleNoClip(state)
+    if state then
+        game:GetService("RunService").Stepped:Connect(function()
+            if not Exploits.NoClip or not localPlayer.Character then return end
+            for _, part in pairs(localPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end)
+    end
+end
+
+-- Time Stop
+local function toggleTimeStop(state)
+    if state then
+        for _, player in pairs(players:GetPlayers()) do
+            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.Anchored = true
+            end
+        end
+    else
+        for _, player in pairs(players:GetPlayers()) do
+            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.Anchored = false
+            end
+        end
+    end
+end
+
+-- Update loop for ESP
+game:GetService("RunService").RenderStepped:Connect(function()
+    updateESP()
+end)
+
 -- Create the GUI using the UI Library
 local MainWindow = UILibrary:CreateWindow({
     Title = "Grok 3 Test",
     Size = Vector2.new(600, 400)
 })
 
--- Bind GUI to Q key
+-- GUI Keybind
+local currentKeybind = Enum.KeyCode.Q
+local waitingForKeybind = false
+
 game:GetService("UserInputService").InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Q then
+    if waitingForKeybind and input.KeyCode ~= Enum.KeyCode.Unknown then
+        currentKeybind = input.KeyCode
+        waitingForKeybind = false
+        return
+    end
+
+    if input.KeyCode == currentKeybind then
         MainWindow.ScreenGui.Enabled = not MainWindow.ScreenGui.Enabled
     end
 end)
@@ -738,9 +884,9 @@ local Sidebar = MainWindow:CreateSidebar({
 -- Add sidebar tabs
 Sidebar:AddTab("Aimbot")
 Sidebar:AddTab("Visuals", true)
+Sidebar:AddTab("Exploits")
 Sidebar:AddTab("Settings")
 Sidebar:AddTab("Lua")
-Sidebar:AddTab("Other")
 
 -- Visuals Page
 local VisualsPage = MainWindow:CreatePage("Visuals")
@@ -817,8 +963,18 @@ local teamcheckCheckbox = VisualsPage:AddCheckbox({
     end
 })
 
--- Color Picker
-local colorPicker = VisualsPage:AddColorPicker({
+-- Dead Check Checkbox
+local deadCheckCheckbox = VisualsPage:AddCheckbox({
+    Name = "Dead Check",
+    Default = false,
+    Callback = function(state)
+        ESP.DeadCheck = state
+        updateESP()
+    end
+})
+
+-- Color Wheel
+local colorWheel = VisualsPage:AddColorWheel({
     Name = "ESP Color",
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(color)
@@ -887,12 +1043,104 @@ local aimbotTeamcheckCheckbox = AimbotPage:AddCheckbox({
     end
 })
 
+-- Dead Check Checkbox
+local aimbotDeadCheckCheckbox = AimbotPage:AddCheckbox({
+    Name = "Dead Check",
+    Default = false,
+    Callback = function(state)
+        Aimbot.DeadCheck = state
+    end
+})
+
+-- Exploits Page
+local ExploitsPage = MainWindow:CreatePage("Exploits")
+ExploitsPage:AddLabel("EXPLOITS")
+
+-- Fly Toggle
+local flyCheckbox = ExploitsPage:AddCheckbox({
+    Name = "Fly",
+    Default = false,
+    Callback = function(state)
+        Exploits.Fly = state
+        toggleFly(state)
+    end
+})
+
+-- Fly Speed Slider
+local flySpeedSlider = ExploitsPage:AddSlider({
+    Name = "Fly Speed",
+    Min = 10,
+    Max = 200,
+    Default = 50,
+    Callback = function(value)
+        Exploits.FlySpeed = value
+    end
+})
+
+-- Speed Toggle
+local speedCheckbox = ExploitsPage:AddCheckbox({
+    Name = "Speed",
+    Default = false,
+    Callback = function(state)
+        Exploits.Speed = state
+        updateSpeed()
+    end
+})
+
+-- Speed Slider
+local speedSlider = ExploitsPage:AddSlider({
+    Name = "Speed Value",
+    Min = 16,
+    Max = 100,
+    Default = 32,
+    Callback = function(value)
+        Exploits.SpeedValue = value
+        updateSpeed()
+    end
+})
+
+-- NoClip Toggle
+local noClipCheckbox = ExploitsPage:AddCheckbox({
+    Name = "NoClip",
+    Default = false,
+    Callback = function(state)
+        Exploits.NoClip = state
+        toggleNoClip(state)
+    end
+})
+
+-- Time Stop Toggle
+local timeStopCheckbox = ExploitsPage:AddCheckbox({
+    Name = "Time Stop",
+    Default = false,
+    Callback = function(state)
+        Exploits.TimeStop = state
+        toggleTimeStop(state)
+    end
+})
+
 -- Settings Page
 local SettingsPage = MainWindow:CreatePage("Settings")
 SettingsPage:AddLabel("SETTINGS")
 
--- Toggle Keybind (for demonstration; actual keybind change requires more UI)
-SettingsPage:AddLabel("Toggle Key: Q")
+-- GUI Bind Toggle
+local guiBindCheckbox = SettingsPage:AddCheckbox({
+    Name = "GUI Bind",
+    Default = false,
+    Callback = function(state)
+        waitingForKeybind = state
+    end
+})
+
+-- Display Current Keybind
+local keybindLabel = SettingsPage:AddLabel("Current Bind: " .. currentKeybind.Name)
+
+-- Update keybind label when changed
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if waitingForKeybind and input.KeyCode ~= Enum.KeyCode.Unknown then
+        keybindLabel.Frame.Text = "Current Bind: " .. currentKeybind.Name
+    end
+end)
 
 -- Lua Page
 local LuaPage = MainWindow:CreatePage("Lua")
@@ -910,42 +1158,3 @@ local luaTextBox = LuaPage:AddTextBox({
         end
     end
 })
-
--- Other Page
-local OtherPage = MainWindow:CreatePage("Other")
-OtherPage:AddLabel("OTHER")
-
--- Kill All Button
-OtherPage:AddButton({
-    Name = "Kill All",
-    Callback = function()
-        for _, player in pairs(players:GetPlayers()) do
-            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
-                player.Character.Humanoid.Health = 0
-            end
-        end
-    end
-})
-
--- Speed Hack Button
-OtherPage:AddButton({
-    Name = "Speed Hack (x2)",
-    Callback = function()
-        if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-            localPlayer.Character.Humanoid.WalkSpeed = 32 -- Default is 16
-        end
-    end
-})
-
--- Reset Speed Button
-OtherPage:AddButton({
-    Name = "Reset Speed",
-    Callback = function()
-        if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-            localPlayer.Character.Humanoid.WalkSpeed = 16
-        end
-    end
-})
-
--- Show the GUI (initially hidden, toggle with Q)
--- MainWindow:Show()
