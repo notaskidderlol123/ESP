@@ -14,6 +14,7 @@ function UILibrary:CreateWindow(options)
     mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35) -- ImGui dark background
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
+    mainFrame.BackgroundTransparency = 1 -- Start transparent for animation
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, 0, 0, 30)
@@ -23,6 +24,7 @@ function UILibrary:CreateWindow(options)
     titleLabel.TextSize = 16
     titleLabel.Font = Enum.Font.SourceSansBold
     titleLabel.Parent = mainFrame
+    titleLabel.BackgroundTransparency = 1
 
     -- Make the GUI draggable
     local dragging = false
@@ -61,11 +63,83 @@ function UILibrary:CreateWindow(options)
         end
     end)
 
-    local window = {Frame = mainFrame, Pages = {}, Sidebar = nil, ScreenGui = screenGui}
+    local window = {Frame = mainFrame, Pages = {}, Sidebar = nil, ScreenGui = screenGui, Theme = "Dark"}
 
-    -- Function to show the window
+    -- Function to update theme
+    function window:UpdateTheme(theme)
+        window.Theme = theme
+        if theme == "Dark" then
+            mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            titleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            titleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            if window.Sidebar then
+                window.Sidebar.Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                for _, tab in pairs(window.Sidebar.Tabs) do
+                    tab.Button.BackgroundColor3 = window.Pages[tab.Name].Frame.Visible and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
+                    tab.Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+                end
+            end
+            for _, page in pairs(window.Pages) do
+                page.Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+                for _, child in pairs(page.Frame:GetChildren()) do
+                    if child:IsA("TextLabel") then
+                        child.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    elseif child:IsA("Frame") and child:FindFirstChild("TextButton") then
+                        child.TextButton.BackgroundColor3 = child.TextButton.BackgroundColor3 == Color3.fromRGB(0, 255, 0) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                    elseif child:IsA("Frame") and child:FindFirstChild("TextLabel") then
+                        child.TextLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    end
+                end
+            end
+        else -- Light theme
+            mainFrame.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+            titleLabel.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+            titleLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+            if window.Sidebar then
+                window.Sidebar.Frame.BackgroundColor3 = Color3.fromRGB(210, 210, 210)
+                for _, tab in pairs(window.Sidebar.Tabs) do
+                    tab.Button.BackgroundColor3 = window.Pages[tab.Name].Frame.Visible and Color3.fromRGB(180, 180, 180) or Color3.fromRGB(210, 210, 210)
+                    tab.Button.TextColor3 = Color3.fromRGB(50, 50, 50)
+                end
+            end
+            for _, page in pairs(window.Pages) do
+                page.Frame.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+                for _, child in pairs(page.Frame:GetChildren()) do
+                    if child:IsA("TextLabel") then
+                        child.TextColor3 = Color3.fromRGB(50, 50, 50)
+                    elseif child:IsA("Frame") and child:FindFirstChild("TextButton") then
+                        child.TextButton.BackgroundColor3 = child.TextButton.BackgroundColor3 == Color3.fromRGB(0, 255, 0) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                    elseif child:IsA("Frame") and child:FindFirstChild("TextLabel") then
+                        child.TextLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Animation for opening
+    local tweenService = game:GetService("TweenService")
+    local openTween = tweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+    local titleTween = tweenService:Create(titleLabel, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+    openTween:Play()
+    titleTween:Play()
+
+    -- Function to show the window with animation
     function window:Show()
         screenGui.Enabled = true
+        openTween:Play()
+        titleTween:Play()
+    end
+
+    -- Function to hide the window with animation
+    function window:Hide()
+        local closeTween = tweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+        local titleCloseTween = tweenService:Create(titleLabel, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+        closeTween:Play()
+        titleCloseTween:Play()
+        closeTween.Completed:Connect(function()
+            screenGui.Enabled = false
+        end)
     end
 
     -- Function to create a sidebar
@@ -75,12 +149,17 @@ function UILibrary:CreateWindow(options)
         sidebarFrame.Position = UDim2.new(0, 0, 0, 30)
         sidebarFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         sidebarFrame.Parent = mainFrame
+        sidebarFrame.BackgroundTransparency = 1
 
         local sidebarList = Instance.new("UIListLayout")
         sidebarList.SortOrder = Enum.SortOrder.LayoutOrder
         sidebarList.Parent = sidebarFrame
 
         local sidebar = {Frame = sidebarFrame, Tabs = {}}
+
+        -- Animation for sidebar
+        local sidebarTween = tweenService:Create(sidebarFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+        sidebarTween:Play()
 
         -- Function to add a tab to the sidebar
         function sidebar:AddTab(name, isActive)
@@ -92,29 +171,41 @@ function UILibrary:CreateWindow(options)
             tabButton.TextSize = 14
             tabButton.Font = Enum.Font.SourceSans
             tabButton.Parent = sidebarFrame
+            tabButton.BackgroundTransparency = 1
+
+            local tabTween = tweenService:Create(tabButton, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+            tabTween:Play()
 
             -- ImGui-style hover effect
             tabButton.MouseEnter:Connect(function()
                 if not (window.Pages[name] and window.Pages[name].Frame.Visible) then
-                    tabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                    tabButton.BackgroundColor3 = window.Theme == "Dark" and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(190, 190, 190)
                 end
             end)
             tabButton.MouseLeave:Connect(function()
                 if not (window.Pages[name] and window.Pages[name].Frame.Visible) then
-                    tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                    tabButton.BackgroundColor3 = window.Theme == "Dark" and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(210, 210, 210)
                 end
             end)
 
             tabButton.MouseButton1Click:Connect(function()
                 for _, t in pairs(sidebar.Tabs) do
-                    t.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                    t.Button.BackgroundColor3 = window.Theme == "Dark" and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(210, 210, 210)
                     if window.Pages[t.Name] then
-                        window.Pages[t.Name].Frame.Visible = false
+                        local page = window.Pages[t.Name].Frame
+                        local fadeOut = tweenService:Create(page, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+                        fadeOut:Play()
+                        fadeOut.Completed:Connect(function()
+                            page.Visible = false
+                        end)
                     end
                 end
-                tabButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                tabButton.BackgroundColor3 = window.Theme == "Dark" and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(180, 180, 180)
                 if window.Pages[name] then
-                    window.Pages[name].Frame.Visible = true
+                    local page = window.Pages[name].Frame
+                    page.Visible = true
+                    local fadeIn = tweenService:Create(page, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+                    fadeIn:Play()
                 end
             end)
 
@@ -133,6 +224,7 @@ function UILibrary:CreateWindow(options)
         pageFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
         pageFrame.Visible = false
         pageFrame.Parent = mainFrame
+        pageFrame.BackgroundTransparency = 1
 
         local pageList = Instance.new("UIListLayout")
         pageList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -154,7 +246,7 @@ function UILibrary:CreateWindow(options)
             label.Parent = pageFrame
         end
 
-        -- Function to add a checkbox
+        -- Function to add a checkbox with keybind support
         function page:AddCheckbox(options)
             local checkboxFrame = Instance.new("Frame")
             checkboxFrame.Size = UDim2.new(1, 0, 0, 30)
@@ -172,7 +264,7 @@ function UILibrary:CreateWindow(options)
             label.Size = UDim2.new(1, -30, 1, 0)
             label.Position = UDim2.new(0, 30, 0, 0)
             label.BackgroundTransparency = 1
-            label.Text = options.Name
+            label.Text = options.Name .. (options.Keybind and " [" .. options.Keybind.Name .. "]" or "")
             label.TextColor3 = Color3.fromRGB(200, 200, 200)
             label.TextSize = 14
             label.Font = Enum.Font.SourceSans
@@ -180,7 +272,12 @@ function UILibrary:CreateWindow(options)
             label.Parent = checkboxFrame
 
             local state = options.Default
+            local keybind = options.Keybind
+            local waitingForKey = false
+
+            -- Toggle on click
             checkbox.MouseButton1Click:Connect(function()
+                if waitingForKey then return end
                 state = not state
                 checkbox.BackgroundColor3 = state and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
                 if options.Callback then
@@ -188,7 +285,28 @@ function UILibrary:CreateWindow(options)
                 end
             end)
 
-            return {GetState = function() return state end}
+            -- Right-click to set keybind
+            checkbox.MouseButton2Click:Connect(function()
+                waitingForKey = true
+                label.Text = options.Name .. " [Waiting for key...]"
+            end)
+
+            -- Keybind input
+            game:GetService("UserInputService").InputBegan:Connect(function(input)
+                if waitingForKey and input.KeyCode ~= Enum.KeyCode.Unknown then
+                    keybind = input.KeyCode
+                    waitingForKey = false
+                    label.Text = options.Name .. " [" .. keybind.Name .. "]"
+                elseif input.KeyCode == keybind and not waitingForKey then
+                    state = not state
+                    checkbox.BackgroundColor3 = state and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                    if options.Callback then
+                        options.Callback(state)
+                    end
+                end
+            end)
+
+            return {GetState = function() return state end, GetKeybind = function() return keybind end}
         end
 
         -- Function to add a dropdown
@@ -318,128 +436,6 @@ function UILibrary:CreateWindow(options)
             return {GetValue = function() return value end}
         end
 
-        -- Function to add a new color wheel (hue wheel + brightness slider)
-        function page:AddColorWheel(options)
-            local wheelFrame = Instance.new("Frame")
-            wheelFrame.Size = UDim2.new(1, 0, 0, 120)
-            wheelFrame.BackgroundTransparency = 1
-            wheelFrame.Parent = pageFrame
-
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, 0, 0, 20)
-            label.BackgroundTransparency = 1
-            label.Text = options.Name
-            label.TextColor3 = Color3.fromRGB(200, 200, 200)
-            label.TextSize = 14
-            label.Font = Enum.Font.SourceSans
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Parent = wheelFrame
-
-            -- Hue Wheel
-            local hueWheel = Instance.new("ImageLabel")
-            hueWheel.Size = UDim2.new(0, 80, 0, 80)
-            hueWheel.Position = UDim2.new(0, 5, 0, 30)
-            hueWheel.BackgroundTransparency = 1
-            hueWheel.Image = "rbxassetid://6020299355" -- Replace with your hue wheel image
-            hueWheel.Parent = wheelFrame
-
-            -- Brightness Slider
-            local brightnessSlider = Instance.new("Frame")
-            brightnessSlider.Size = UDim2.new(0, 20, 0, 80)
-            brightnessSlider.Position = UDim2.new(0, 90, 0, 30)
-            brightnessSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            brightnessSlider.Parent = wheelFrame
-
-            local brightnessGradient = Instance.new("UIGradient")
-            brightnessGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-            })
-            brightnessGradient.Rotation = 90
-            brightnessGradient.Parent = brightnessSlider
-
-            local brightnessIndicator = Instance.new("Frame")
-            brightnessIndicator.Size = UDim2.new(1, 0, 0, 2)
-            brightnessIndicator.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            brightnessIndicator.Position = UDim2.new(0, 0, 0, 0)
-            brightnessIndicator.Parent = brightnessSlider
-
-            local colorDisplay = Instance.new("Frame")
-            colorDisplay.Size = UDim2.new(0, 20, 0, 20)
-            colorDisplay.Position = UDim2.new(0, 115, 0, 30)
-            colorDisplay.BackgroundColor3 = options.Default
-            colorDisplay.Parent = wheelFrame
-
-            local hue = 0
-            local saturation = 1
-            local brightness = 1
-            local color = options.Default
-            local selectingHue = false
-            local selectingBrightness = false
-
-            -- Hue Wheel Interaction
-            hueWheel.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    selectingHue = true
-                end
-            end)
-
-            hueWheel.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    selectingHue = false
-                end
-            end)
-
-            -- Brightness Slider Interaction
-            brightnessSlider.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    selectingBrightness = true
-                end
-            end)
-
-            brightnessSlider.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    selectingBrightness = false
-                end
-            end)
-
-            game:GetService("UserInputService").InputChanged:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseMovement then
-                    if selectingHue then
-                        local mousePos = Vector2.new(input.Position.X, input.Position.Y)
-                        local wheelPos = hueWheel.AbsolutePosition + hueWheel.AbsoluteSize / 2
-                        local delta = mousePos - wheelPos
-                        local angle = math.atan2(delta.Y, delta.X)
-                        hue = (angle + math.pi) / (2 * math.pi)
-                        saturation = math.clamp(delta.Magnitude / (hueWheel.AbsoluteSize.X / 2), 0, 1)
-                        local r, g, b = Color3.fromHSV(hue, saturation, brightness):ToRGB()
-                        color = Color3.fromRGB(r * 255, g * 255, b * 255)
-                        colorDisplay.BackgroundColor3 = color
-                        if options.Callback then
-                            options.Callback(color)
-                        end
-                    end
-
-                    if selectingBrightness then
-                        local mousePos = input.Position.Y
-                        local sliderPos = brightnessSlider.AbsolutePosition.Y
-                        local sliderHeight = brightnessSlider.AbsoluteSize.Y
-                        local relativePos = math.clamp((mousePos - sliderPos) / sliderHeight, 0, 1)
-                        brightness = 1 - relativePos
-                        brightnessIndicator.Position = UDim2.new(0, 0, relativePos, 0)
-                        local r, g, b = Color3.fromHSV(hue, saturation, brightness):ToRGB()
-                        color = Color3.fromRGB(r * 255, g * 255, b * 255)
-                        colorDisplay.BackgroundColor3 = color
-                        if options.Callback then
-                            options.Callback(color)
-                        end
-                    end
-                end
-            end)
-
-            return {GetColor = function() return color end}
-        end
-
         -- Function to add a button (for GUI Bind)
         function page:AddButton(options)
             local buttonFrame = Instance.new("Frame")
@@ -463,9 +459,21 @@ function UILibrary:CreateWindow(options)
                 button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             end)
 
+            local waitingForKey = false
             button.MouseButton1Click:Connect(function()
-                if options.Callback then
+                if options.Keybind then
+                    waitingForKey = true
+                    button.Text = "Waiting for key..."
+                elseif options.Callback then
                     options.Callback()
+                end
+            end)
+
+            game:GetService("UserInputService").InputBegan:Connect(function(input)
+                if waitingForKey and input.KeyCode ~= Enum.KeyCode.Unknown then
+                    options.Keybind.Value = input.KeyCode
+                    waitingForKey = false
+                    button.Text = options.Name .. " [" .. options.Keybind.Value.Name .. "]"
                 end
             end)
 
@@ -566,6 +574,15 @@ local Exploits = {
     SpeedValue = 32,
     NoClip = false,
     TimeStop = false
+}
+
+local Keybinds = {
+    Aimlock = {Value = Enum.KeyCode.E},
+    Fly = {Value = Enum.KeyCode.F},
+    Speed = {Value = Enum.KeyCode.G},
+    NoClip = {Value = Enum.KeyCode.H},
+    TimeStop = {Value = Enum.KeyCode.J},
+    GUI = {Value = Enum.KeyCode.Q}
 }
 
 local players = game:GetService("Players")
@@ -806,6 +823,41 @@ local function getClosestPlayerToMouse()
     return closestPlayer
 end
 
+-- Function to get the nearest player to the local player
+local function getNearestPlayer()
+    local closestPlayer = nil
+    local closestDistance = Aimbot.UseFOV and Aimbot.FOV or math.huge
+
+    for _, player in pairs(players:GetPlayers()) do
+        if player == localPlayer then continue end
+        if Aimbot.Teamcheck and player.Team == localPlayer.Team then continue end
+
+        local character = player.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then continue end
+
+        local rootPart = character.HumanoidRootPart
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid then continue end
+        if Aimbot.DeadCheck and humanoid.Health <= 0 then continue end
+
+        local distance = (rootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
+        local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+        if not onScreen then continue end
+
+        if Aimbot.UseFOV then
+            local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+            if screenDistance > Aimbot.FOV then continue end
+        end
+
+        if distance < closestDistance then
+            closestDistance = distance
+            closestPlayer = player
+        end
+    end
+
+    return closestPlayer
+end
+
 -- FOV Circle for Aimbot
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = false
@@ -815,10 +867,10 @@ fovCircle.Color = Color3.fromRGB(255, 255, 255)
 fovCircle.Thickness = 2
 fovCircle.Filled = false
 
--- Aimlock (face HRP)
+-- Aimlock (lock onto nearest player)
 game:GetService("RunService").RenderStepped:Connect(function()
     if Aimbot.Enabled and Aimbot.Aimlock then
-        local target = getClosestPlayerToMouse()
+        local target = getNearestPlayer()
         if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
             local hrpPos = target.Character.HumanoidRootPart.Position
             camera.CFrame = CFrame.new(camera.CFrame.Position, hrpPos)
@@ -899,10 +951,15 @@ local function toggleFly(state)
 
             local moveDirection = Vector3.new(
                 game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) and -1 or 0,
-                game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) and -1 or 0,
+                game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftControl) and -1 or 0,
                 game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) and 1 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) and -1 or 0
             )
-            bodyVelocity.Velocity = (camera.CFrame * moveDirection).Unit * Exploits.FlySpeed
+
+            if moveDirection.Magnitude > 0 then
+                bodyVelocity.Velocity = camera.CFrame:VectorToWorldSpace(moveDirection).Unit * Exploits.FlySpeed
+            else
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
             bodyGyro.CFrame = camera.CFrame
         end)
     else
@@ -967,18 +1024,13 @@ local MainWindow = UILibrary:CreateWindow({
 })
 
 -- GUI Keybind
-local currentKeybind = Enum.KeyCode.Q
-local waitingForKeybind = false
-
 game:GetService("UserInputService").InputBegan:Connect(function(input)
-    if waitingForKeybind and input.KeyCode ~= Enum.KeyCode.Unknown then
-        currentKeybind = input.KeyCode
-        waitingForKeybind = false
-        return
-    end
-
-    if input.KeyCode == currentKeybind then
-        MainWindow.ScreenGui.Enabled = not MainWindow.ScreenGui.Enabled
+    if input.KeyCode == Keybinds.GUI.Value then
+        if MainWindow.ScreenGui.Enabled then
+            MainWindow:Hide()
+        else
+            MainWindow:Show()
+        end
     end
 end)
 
@@ -1078,16 +1130,6 @@ local deadCheckCheckbox = VisualsPage:AddCheckbox({
     end
 })
 
--- New Color Wheel
-local colorWheel = VisualsPage:AddColorWheel({
-    Name = "ESP Color",
-    Default = Color3.fromRGB(255, 0, 0),
-    Callback = function(color)
-        ESP.Color = color
-        updateESP()
-    end
-})
-
 -- Aimbot Page
 local AimbotPage = MainWindow:CreatePage("Aimbot")
 AimbotPage:AddLabel("AIMBOT")
@@ -1105,6 +1147,7 @@ local aimbotEnabledCheckbox = AimbotPage:AddCheckbox({
 local aimlockCheckbox = AimbotPage:AddCheckbox({
     Name = "Aimlock",
     Default = false,
+    Keybind = Keybinds.Aimlock,
     Callback = function(state)
         Aimbot.Aimlock = state
     end
@@ -1165,6 +1208,7 @@ ExploitsPage:AddLabel("EXPLOITS")
 local flyCheckbox = ExploitsPage:AddCheckbox({
     Name = "Fly",
     Default = false,
+    Keybind = Keybinds.Fly,
     Callback = function(state)
         Exploits.Fly = state
         toggleFly(state)
@@ -1186,6 +1230,7 @@ local flySpeedSlider = ExploitsPage:AddSlider({
 local speedCheckbox = ExploitsPage:AddCheckbox({
     Name = "Speed",
     Default = false,
+    Keybind = Keybinds.Speed,
     Callback = function(state)
         Exploits.Speed = state
         updateSpeed()
@@ -1208,6 +1253,7 @@ local speedSlider = ExploitsPage:AddSlider({
 local noClipCheckbox = ExploitsPage:AddCheckbox({
     Name = "NoClip",
     Default = false,
+    Keybind = Keybinds.NoClip,
     Callback = function(state)
         Exploits.NoClip = state
         toggleNoClip(state)
@@ -1218,6 +1264,7 @@ local noClipCheckbox = ExploitsPage:AddCheckbox({
 local timeStopCheckbox = ExploitsPage:AddCheckbox({
     Name = "Time Stop",
     Default = false,
+    Keybind = Keybinds.TimeStop,
     Callback = function(state)
         Exploits.TimeStop = state
         toggleTimeStop(state)
@@ -1230,19 +1277,18 @@ SettingsPage:AddLabel("SETTINGS")
 
 -- GUI Bind Button
 local guiBindButton = SettingsPage:AddButton({
-    Name = "GUI Bind: " .. currentKeybind.Name,
-    Callback = function()
-        waitingForKeybind = true
-        guiBindButton.Text = "Waiting for key..."
-    end
+    Name = "GUI Bind: " .. Keybinds.GUI.Value.Name,
+    Keybind = Keybinds.GUI
 })
 
--- Update button text when keybind changes
-game:GetService("UserInputService").InputBegan:Connect(function(input)
-    if waitingForKeybind and input.KeyCode ~= Enum.KeyCode.Unknown then
-        guiBindButton.Text = "GUI Bind: " .. currentKeybind.Name
+-- Theme Toggle
+local themeCheckbox = SettingsPage:AddCheckbox({
+    Name = "Light Mode",
+    Default = false,
+    Callback = function(state)
+        MainWindow:UpdateTheme(state and "Light" or "Dark")
     end
-end)
+})
 
 -- Lua Page
 local LuaPage = MainWindow:CreatePage("Lua")
